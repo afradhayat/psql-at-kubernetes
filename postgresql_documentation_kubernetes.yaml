@@ -1,0 +1,113 @@
+============================================================================================================================
+										DEPLOY POSTGRESQL USING KUBERNETES
+============================================================================================================================
+
+Configuration:
+OS: Centos 7
+Kubernetes 1 master and 2 worker node
+
+============================================================================================================================
+
+Install Helm and ADD helm repository
+
+============================================================================================================================
+
+01. curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+
+02. chmod 700 get_helm.sh
+
+03. ./get_helm.sh
+
+04. helm repo add bitnami https://charts.bitnami.com/bitnami
+
+05. helm repo update 
+
+================================================================================================================================
+
+Create Persistent Storage Volume
+
+================================================================================================================================
+
+06. vi postgres-pv.yaml
+
+07. Make the following yaml file
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: postgresql-pv
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data"
+	
+
+08. kubectl apply -f postgres-pv.yaml 
+
+
+====================================================================================================================================
+
+Create the Persistent Volume Claim
+
+=====================================================================================================================================
+
+09. vi postgres-pvc.yaml
+
+10. Make the following yaml file
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgresql-pv-claim
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+	  
+	  
+11. kubectl apply -f postgres-pvc.yaml
+
+12. kubectl get pvc
+
+=====================================================================================================================================
+
+Install Helm Chart
+
+=====================================================================================================================================
+
+13. helm install psql-test bitnami/postgresql --set persistence.existingClaim=postgresql-pv-claim --set volumePermissions.enabled=true
+
+
+=====================================================================================================================================
+
+Connect to POSTGRESQL CLIENT [ Install the client if it is not installed at the system ] 
+
+=====================================================================================================================================
+
+14. export POSTGRES_PASSWORD=$(kubectl get secret --namespace default psql-test-postgresql -o jsonpath="{.data.postgresql-password}" | base64 --decode) 
+
+15. kubectl port-forward --namespace default svc/psql-test-postgresql 5432:5432 [ Run this command from a separate tab ]
+
+16. dnf install postgresql-client-12
+
+17. PGPASSWORD="$POSTGRES_PASSWORD" psql --host 127.0.0.1 -U postgres -d postgres -p 5432
+
+
+########################### THE PSQL COMMAND PROMPT APPEARS #####################################
+
+
+
+=====================================================================================================================================
+
+		              DEPLOYMENT OF POSTGRESQL AT KUBERNETES ENVIRONMENT BY @ afrad hayat
+													
+=====================================================================================================================================
